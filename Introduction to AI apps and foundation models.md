@@ -1,354 +1,549 @@
-# 🤖 AI Concepts for Product Managers
-### A Plain-English Guide · *Based on "AI Engineering: Building Applications with Foundation Models"*
+# 🤖 AI Engineering — Study Notes
+### *Building Applications with Foundation Models*
+
+> 📖 **Source:** *AI Engineering: Building Applications with Foundation Models* by **Chip Huyen** (O'Reilly Media)
+> Chapters 1 & 2 — Notes for aspiring AI Engineers
 
 ---
 
 ## 📚 Table of Contents
-- [Part 1: Core AI Concepts](#part-1-core-ai-concepts-explained-simply)
-- [Part 2: Use Case Flash Cards](#part-2-use-case-flash-cards)
-- [Part 3: PM Decision Framework](#part-3-pm-decision-framework)
+
+- [Chapter 1: Introduction to AI Engineering](#chapter-1-introduction-to-building-ai-applications-with-foundation-models)
+  - [1.1 From Language Models → LLMs → Foundation Models](#11-from-language-models--llms--foundation-models)
+  - [1.2 Why AI Engineering Exploded: 3 Key Factors](#12-why-ai-engineering-exploded-3-key-factors)
+  - [1.3 Foundation Model Use Cases](#13-foundation-model-use-cases)
+  - [1.4 Planning an AI Application](#14-planning-an-ai-application--key-questions-to-ask)
+  - [1.5 The AI Engineering Stack](#15-the-ai-engineering-stack)
+- [Chapter 2: Understanding Foundation Models](#chapter-2-understanding-foundation-models)
+  - [2.1 Training Data](#21-training-data)
+- [📖 Glossary](#-quick-reference-glossary)
+- [✅ Action Checklist](#-action-checklist-for-aspiring-ai-engineers)
 
 ---
 
-# Part 1: Core AI Concepts Explained Simply
+# Chapter 1: Introduction to Building AI Applications with Foundation Models
 
-> Each concept includes: **what it means**, a plain-English analogy, and a real product example.
+## 1. The Big Picture: What is AI Engineering?
 
----
+If you had to describe post-2020 AI in one word, that word would be **scale**. AI models powering ChatGPT, Google Gemini, and Midjourney are consuming a non-trivial portion of the world's electricity — and we're on track to run out of public internet data to train them.
 
-## 1. Language Model
-
-| | |
-|---|---|
-| **What it means** | A computer program that has read enormous amounts of text and learned patterns in language — so it can predict what word or phrase comes next, given some context. |
-| **Think of it like** | *A very well-read autocomplete. Like your phone's keyboard that suggests the next word, but trained on billions of books, articles, and websites instead of just your texts.* |
-| **Real example** | Gmail's Smart Compose suggests "I hope you're well" after you type "Hi Sarah," because it has learned that phrase commonly follows a greeting in work emails. |
-
----
-
-## 2. Token
-
-| | |
-|---|---|
-| **What it means** | The smallest chunk of text an AI processes. Not always a full word — it could be part of a word, a punctuation mark, or a whole short word. **100 tokens ≈ 75 words.** |
-| **Think of it like** | *Like how a cashier counts items at a supermarket checkout — they don't count each ingredient inside a tin, just the unit on the conveyor belt. Tokens are AI's "units".* |
-| **Real example** | The word `can't` becomes two tokens: `can` and `'t`. So "I can't wait to build AI apps" = 9 tokens, not 9 words. This matters for pricing — most AI APIs charge per token. |
-
-> 💡 **PM Tip:** API costs are calculated per token. A typical customer support message might be ~200 tokens. Understanding this helps you estimate costs accurately when pitching AI features to your finance team.
-
----
-
-## 3. Vocabulary (of a model)
-
-| | |
-|---|---|
-| **What it means** | The complete set of tokens a model knows about. Think of it as the model's "dictionary". GPT-4 knows 100,256 different tokens. A model can only work with text made up of tokens it knows. |
-| **Think of it like** | *Like a Scrabble set — you can only make words from the tiles in the bag. More tiles (bigger vocabulary) = more flexibility in what you can express.* |
-| **Real example** | Mixtral (open source) has a 32,000-token vocabulary. GPT-4 has 100,256. Bigger vocabulary = better at handling technical jargon, foreign languages, and unusual words — relevant if your product serves niche industries. |
-
----
-
-## 4. Generative AI
-
-| | |
-|---|---|
-| **What it means** | AI that can **CREATE** new content — text, images, code, audio — rather than just classifying or sorting existing content. It produces open-ended outputs that didn't exist before. |
-| **Think of it like** | *Traditional AI is like a multiple-choice test (pick A, B, C or D). Generative AI is like an open essay question — the model writes its own answer from scratch, and the answer is different every time.* |
-| **Real example** | ChatGPT generating a personalised marketing email vs. a spam filter (traditional AI) that just labels your email as "spam" or "not spam". Both are AI — only ChatGPT is generative. |
-
----
-
-## 5. Completion / Prompt-Completion Model
-
-| | |
-|---|---|
-| **What it means** | The core mechanic of language models: you give it text (the **prompt**) and it completes it. Almost everything AI does — answering questions, translating, summarising — is secretly a completion task in disguise. |
-| **Think of it like** | *Like filling in the blank on a sentence. You write: "The capital of France is ___" and the model completes it. Even a full conversation is really just a very long fill-in-the-blank.* |
-| **Real example** | Prompt: `"Is this email likely spam? Email: [email text]. Answer:"` — The model completes with `"Likely spam."` Suddenly your LLM is a spam classifier, built with zero additional training. |
-
-> 💡 **PM Tip:** Almost any task you want AI to do can be framed as a prompt. Before asking engineers to build a complex ML pipeline, first try writing a clear prompt. It often works surprisingly well.
-
----
-
-## 6. Probabilistic Outputs *(Why AI isn't always consistent)*
-
-| | |
-|---|---|
-| **What it means** | AI doesn't look up the "right" answer — it calculates the **most probable next word** based on patterns in its training. This means the same question can get slightly different answers each time, and it can sometimes be confidently wrong. |
-| **Think of it like** | *Like asking a very well-read person to guess the next word in a sentence. They're usually right, but they're making an educated guess — not looking up a fact. Sometimes they guess wrong, sometimes brilliantly.* |
-| **Real example** | Ask ChatGPT `"What is 2+2?"` ten times — you'll get `"4"` every time (high probability). Ask `"Write me a tagline for my coffee shop"` ten times — you'll get ten different answers. This is a feature, not a bug, for creative tasks. |
-
-> 💡 **PM Tip:** This is why AI outputs need human review for high-stakes decisions (medical, legal, financial). Design your product with a "human in the loop" for anything where a confident wrong answer could cause harm.
-
----
-
-## 7. Self-Supervision *(How AI learns without humans labelling data)*
-
-| | |
-|---|---|
-| **What it means** | A clever training trick: instead of paying humans to label millions of examples, the AI creates its own "exam questions" from raw text. For every sentence, it hides one word and tries to guess it — using the surrounding text as clues. |
-| **Think of it like** | *Like a student who studies by covering up answers and quizzing themselves. Every sentence in every book becomes a practice question automatically, with no teacher needed.* |
-| **Real example** | From the sentence `"I love street food."` the AI creates 6 free training examples: it tries to predict `I` from nothing, then `love` from `I`, then `street` from `I love`, and so on. Billions of sentences = trillions of free lessons. |
-
-> 💡 **PM Tip:** This is WHY AI models can be so capable — they've essentially read and practised with most of the internet. It's also why data quality matters: garbage in, garbage out.
-
----
-
-## 8. Supervision vs Self-Supervision
-
-| | Traditional (Supervised) AI | Modern AI (Self-Supervised) |
-|---|---|---|
-| **How it learns** | Humans manually label examples (e.g. "this photo = cat") | AI creates its own labels from raw text automatically |
-| **Data cost** | Expensive — $0.05 per image; $50K for 1 million images | Near zero — uses text that already exists online |
-| **Scale limit** | Can only scale as fast as humans can label | Unlimited — train on billions of web pages |
-| **PM implication** | Used for specific, narrow tasks (fraud detection, image tags) | Powers general assistants like ChatGPT |
-| **Example product** | Google Photos recognising your friends' faces | ChatGPT writing your product specs |
-
----
-
-## 9. Foundation Model
-
-| | |
-|---|---|
-| **What it means** | A very large AI model trained on massive amounts of data that can be adapted for many different tasks. It's called a "foundation" because you **build on top of it** rather than starting from scratch each time. |
-| **Think of it like** | *Like a Swiss Army knife vs. a single-purpose tool. An old-school AI was a single knife (just for cheese). A foundation model is the whole Swiss Army knife — you pick which tool to use depending on your task.* |
-| **Real example** | GPT-4 (OpenAI), Claude (Anthropic), and Gemini (Google) are all foundation models. A company can take GPT-4 and adapt it to be a customer support bot, a code assistant, or a legal document summariser — all from the same base model. |
-
----
-
-## 10. Multimodal Model
-
-| | |
-|---|---|
-| **What it means** | An AI that can understand and work with **more than one type of input** — for example, both text AND images in the same conversation. "Multi" = many. "Modal" = type of data. |
-| **Think of it like** | *Like a person who can both read a document AND look at a diagram to understand a problem — rather than only being able to read text or only look at pictures.* |
-| **Real example** | You upload a photo of your product's dashboard and ask "What's wrong with this UX?" — a multimodal model like GPT-4V or Claude 3 can actually see the image and give you feedback. A text-only model couldn't. |
-
-> 💡 **PM Tip:** Multimodal capabilities unlock new product features: photo-based customer support ("here's a photo of my broken device"), visual search, accessibility tools. Ask your team which model supports images if your use case involves visuals.
-
----
-
-## 11. Parameters *(Why model size matters to you as a PM)*
-
-| | |
-|---|---|
-| **What it means** | Parameters are the millions or billions of internal settings inside a model — think of them as the model's "memory". **More parameters = bigger capacity to learn.** Bigger models are generally smarter but cost more to run. |
-| **Think of it like** | *Like a brain with more neural connections. A mouse brain has fewer connections than a human brain — so it can learn simpler things. More connections = more complexity you can handle.* |
-| **Real example** | GPT-1 (2018): 117 million parameters. GPT-4 (estimated): 100+ billion parameters. A smaller model like Mistral 7B is cheaper to run and good for simple tasks. Bigger isn't always better — choose based on your task complexity and budget. |
-
-### Quick guide: Which model size for which PM scenario?
-
-| Scenario | Model Size to Consider | Why |
-|---|---|---|
-| Internal FAQ bot for 10 employees | Small (7B params) | Simple Q&A — cheap to run, fast |
-| Customer support chatbot (millions of users) | Medium (70B params) | Needs nuance + reliability at scale |
-| Legal document analysis | Large (100B+ params) | Complex reasoning required |
-| Generating product descriptions | Small–Medium | Creative but not highly complex |
-| Medical diagnosis support | Large + human review | High stakes — accuracy critical |
-
----
-
-## 12. The 3 Ways to Adapt an AI Model to Your Product
-
-> This is the most important thing a PM needs to understand — you rarely build from scratch. You take an existing model and adapt it one of three ways:
-
-| Method | What it is | Analogy | Cost / Effort | When to use it |
-|---|---|---|---|---|
-| **Prompt Engineering** | Write better instructions to the AI. No code changes, no model changes. | Giving a new employee very clear instructions before their first day | 🟢 Low — days to weeks. No engineering needed | Starting point for everything. Good for 80% of use cases. |
-| **RAG** *(Retrieval-Augmented Generation)* | Connect the AI to YOUR data. AI looks up relevant info before answering. | Giving the employee access to your company wiki before they answer a question | 🟡 Medium — weeks. Needs some engineering | When AI needs to know YOUR specific data: policies, products, customer history. |
-| **Finetuning** | Retrain the model on your specific examples to change its behaviour. | Sending the employee on a specialist training course tailored to your business | 🔴 High — months + data. Needs ML engineers | When prompt engineering and RAG aren't enough. For very specific tone or style. |
-
-> 💡 **PM Tip:** Always start with prompt engineering — it's free and fast. Only invest in RAG or finetuning if prompt engineering clearly isn't giving you the quality you need. The "last mile" from good to great can take months — budget for it.
-
----
-
-## 13. Training Jargon Decoded
-
-> When engineers and vendors use these terms, here's what they actually mean:
-
-| Term | Plain English | PM Implication |
-|---|---|---|
-| **Pre-training** | Building the model from the ground up, training it on all of the internet. Takes months, costs millions. Done by companies like OpenAI, Anthropic, Google. | You will almost never do this. It's for AI labs only. Your job is to pick the right pre-trained model. |
-| **Fine-tuning** | Taking a pre-trained model and giving it extra training on YOUR specific data to change how it behaves. Like sending a new hire on a specialist course. | You might do this after 6–12 months of using the base model, when you have enough data and a clear quality gap to close. |
-| **Post-training** | What model companies do after pre-training to make the model safer and more helpful. This is how ChatGPT learned to be polite and follow instructions. | Handled by the model provider (OpenAI, Anthropic). Affects the model's tone, safety guardrails, and instruction-following. |
-| **Prompt Engineering** *(NOT training)* | Writing better instructions to the model in plain text. No model weights are changed. People sometimes incorrectly call this "training". | This is what your team should start with. Fast, cheap, reversible. **Start here always.** |
-
----
-
-## 14. Hallucination — The #1 PM Risk to Understand
-
-| | |
-|---|---|
-| **What it means** | When an AI **confidently states something that is factually wrong**. It's not lying — it genuinely doesn't know it's wrong. It's predicting what sounds plausible based on patterns, not looking things up in a database. |
-| **Think of it like** | *Like a student who didn't study but writes a very confident-sounding essay. The grammar is perfect, the tone is authoritative, but half the facts are made up.* |
-| **Real example** | A customer asks your AI bot "What's your return policy?" and instead of saying "I don't know", the AI invents a policy that sounds plausible but is wrong. Customer acts on it. You have a legal and trust problem. |
-
-> 💡 **PM Tip:** Mitigate hallucination with RAG (connect AI to your actual data) and always build in human review for high-stakes outputs. Design your product so the AI says "I'm not sure" rather than guessing. Position AI as a "helpful assistant" not an "oracle".
-
----
-
-## 15. Inference *(and why it affects your product speed)*
-
-| | |
-|---|---|
-| **What it means** | Inference = the model **generating an answer in real time** when a user asks something. Every time your product calls the AI, that's an inference. Faster inference = snappier product. Cheaper inference = better margins. |
-| **Think of it like** | *Like a chef cooking a meal to order (inference) vs. a factory pre-making 10,000 meals (training). Inference is the on-demand part — it happens every time a user uses your product.* |
-| **Real example** | GPT-4 might take 3–5 seconds to generate a long response. Newer, smaller, optimised models might do it in under 1 second. For a live customer chat feature, 5 seconds feels very slow — so model choice directly affects perceived product quality. |
-
-> 💡 **PM Tip:** Always measure **TTFT (Time to First Token)** — how quickly does the first word appear? Even if the full response takes 5 seconds, showing the first word in 0.5 seconds feels much faster to users. Streaming responses dramatically improve perceived speed.
-
----
-
-# Part 2: Use Case Flash Cards
-
-> Each card covers: **what it is**, **when your product should use it**, and a **real-world example**.
-
----
-
-## 🖥️ Use Case 1 — AI Coding Assistant
-
-| | |
-|---|---|
-| **What is it?** | AI that helps developers write, review, document, and test code. It reads your codebase and suggests completions, fixes bugs, and writes docs. |
-| **When to use?** | When your users are developers, or when you want to speed up your own engineering team. Best ROI for documentation (**+45–50% faster**) and code generation (**+35–45% faster**). Less useful for highly complex architectural decisions (<10% improvement). |
-| **Real world example** | GitHub Copilot crossed $100M annual revenue in 2 years. Your dev team could write documentation 2× faster today by enabling Copilot in their IDE. If you're building a developer tool, a coding assistant is table stakes. |
-
----
-
-## 💬 Use Case 2 — Customer Support Chatbot
-
-| | |
-|---|---|
-| **What is it?** | An AI bot that handles customer questions automatically — 24/7, instantly, at a fraction of the cost of human agents. Can handle FAQs, policy questions, order status, and route complex issues to humans. |
-| **When to use?** | When you have high volume, repetitive support tickets. Start with internal tools first (62% of companies deploy internal-facing apps before external). Go external once you've hit >90% accuracy on common queries. Always keep a human escalation path. |
-| **Real world example** | A retailer deploys a chatbot for "Where's my order?" questions (60% of all tickets). Human agents now only handle complaints and complex cases. Response time drops from 4 hours to 30 seconds. CSAT improves because simple queries get instant answers. |
-
----
-
-## ✍️ Use Case 3 — Writing Assistant
-
-| | |
-|---|---|
-| **What is it?** | AI that helps users write better, faster. Can draft emails, blog posts, marketing copy, reports, performance reviews — and edit or improve existing text. |
-| **When to use?** | When writing is a core part of your users' workflow. Particularly powerful for sales teams (cold outreach), marketing (copy generation), and managers (performance reviews, internal comms). Also great for non-native English speakers. |
-| **Real world example** | MIT study: ChatGPT cut writing time by **40%** and improved quality by **18%** for 453 professionals. Workers were 2× more likely to keep using it after the experiment. HubSpot and Salesforce now have built-in AI writing for outreach emails. |
-
----
-
-## 📄 Use Case 4 — Document Q&A / Talk-to-Your-Docs *(RAG)*
-
-| | |
-|---|---|
-| **What is it?** | Upload a document (contract, policy, report, manual) and ask questions about it in plain English. The AI reads the document and answers based only on what's in it — no hallucination from general knowledge. |
-| **When to use?** | When users need to extract information from long, dense documents. Ideal for legal teams (contracts), HR (policy questions), finance (reports), customer support (product manuals). Use RAG to ground answers in real data. |
-| **Real world example** | A legal team uploads a 200-page supplier contract and asks "What are the termination clauses?" — gets the answer in 10 seconds instead of spending 2 hours reading. An HR chatbot answers "How many sick days do I get?" by reading the actual employee handbook. |
-
----
-
-## 🎨 Use Case 5 — Image & Video Generation
-
-| | |
-|---|---|
-| **What is it?** | AI creates original images or videos from a text description. Useful for marketing materials, product visualisation, social media content, and rapid prototyping of visual ideas. |
-| **When to use?** | When your product needs visual content at scale or speed. Best for marketing teams needing many ad variants, design prototyping, or social media content. Think "fast draft" not "final asset". NOT a replacement for brand photography or complex creative direction. |
-| **Real world example** | A retailer uses AI to generate 50 product image variations for different seasons (summer vs winter backgrounds) in 1 hour instead of 1 week of photography. Midjourney: **$200M annual revenue** at just 18 months old. Adobe Firefly is now built into Photoshop. |
-
----
-
-## 📊 Use Case 6 — Summarisation & Information Aggregation
-
-| | |
-|---|---|
-| **What is it?** | AI reads long content (meeting transcripts, emails, Slack threads, research papers) and produces a concise summary with key points and action items. |
-| **When to use?** | When information overload is a pain point for your users. **74% of generative AI users** already use it for this. Particularly valuable for executives, researchers, and anyone in information-heavy roles. Very low hallucination risk when grounded in provided content. |
-| **Real world example** | Instacart's most popular internal AI prompt is "Fast Breakdown" — it summarises meeting notes, emails, and Slack conversations into facts, open questions, and action items, then auto-assigns tasks in Jira. Your PM team could summarise every user research interview in 30 seconds. |
-
----
-
-## 🎓 Use Case 7 — Education & Personalised Learning
-
-| | |
-|---|---|
-| **What is it?** | AI acts as a tutor — explaining concepts, generating practice questions, providing feedback, and adapting content to the learner's pace and style. |
-| **When to use?** | When your product needs to teach something. B2B: onboarding, compliance training, upskilling. B2C: language learning, exam prep, skills training. Most powerful for **personalisation** — same content, different learning styles. |
-| **Real world example** | Duolingo uses AI most heavily for lesson personalisation. Khan Academy's "Khanmigo" is an AI tutor for students. Chegg lost **93% of its stock value** ($28 → $2) as students switched from homework help to ChatGPT — showing AI's disruption of this space is already happening. |
-
----
-
-## ⚙️ Use Case 8 — Workflow Automation & AI Agents
-
-| | |
-|---|---|
-| **What is it?** | AI that doesn't just answer questions — it **takes actions**. Books things, fills forms, sends emails, updates systems. An "agent" is an AI that can plan multi-step tasks and use tools to complete them. |
-| **When to use?** | When your product involves repetitive multi-step processes. Think: lead generation, data entry, scheduling, research compilation. Still early stage — works well for well-defined tasks. Always include human review before irreversible actions. |
-| **Real world example** | An AI agent for a sales team: given a list of prospects, it researches each one online, drafts a personalised outreach email, and adds it to the CRM — in minutes instead of hours. Your PM team could automate competitor tracking by having an agent monitor news and summarise weekly. |
-
----
-
-# Part 3: PM Decision Framework
-
-> Key questions to ask before building any AI feature.
-
----
-
-## Before your next AI feature discussion, ask these 5 questions:
-
-### ❓ 1. Does AI need to be CRITICAL or COMPLEMENTARY?
-
-| | |
-|---|---|
-| **Critical** | The feature doesn't work without AI (e.g. real-time translation). Requires a much higher accuracy bar. Design for failure if you choose this path. |
-| **Complementary** | The product works fine without it (e.g. Smart Compose in Gmail). More forgiving of mistakes — users can simply ignore bad suggestions. |
-| **PM implication** | The more critical AI is to the application, the more accurate and reliable it must be. Start complementary; earn the right to go critical. |
-
----
-
-### ❓ 2. Is this REACTIVE or PROACTIVE?
-
-| | |
-|---|---|
-| **Reactive** | AI responds when a user asks something (e.g. chatbot). Usually needs low latency. More forgiving of errors because users asked for it. |
-| **Proactive** | AI acts without being asked (e.g. Google Maps traffic alert). Can be precomputed. **Higher quality bar** — users didn't ask for it, so errors feel intrusive. |
-| **PM implication** | Proactive features need to earn their place. If the signal isn't strong, don't show it. A noisy proactive AI quickly gets ignored or turned off. |
-
----
-
-### ❓ 3. What is our USEFULNESS THRESHOLD?
-
-| | |
-|---|---|
-| **Define it measurably** | "Automates 60% of tickets" or "Users rate responses 4+/5" or "Reduces handle time by 30%". |
-| **Don't launch below it** | A bad AI experience is worse than no AI. It erodes trust and is hard to recover from. |
-| **PM implication** | Set the threshold before you build. Tie it to your business metric. Don't let engineers or executives pressure you to ship before you hit it. |
-
----
-
-### ❓ 4. Have we planned for the LAST MILE?
-
-| Stage | Time | Reality |
-|---|---|---|
-| 0% → 80% quality | ~1 month | Fast — base models are impressive out of the box |
-| 80% → 95% quality | ~4+ months | Disproportionately hard — hallucinations, edge cases, trust issues |
-| Each subsequent 1% gain | Gets slower | Discouraging — budget for this explicitly |
-
-> 💡 **PM Tip:** LinkedIn took 1 month to reach 80% of the experience they wanted, then 4 *more* months to reach 95%. Budget for the long tail — it's where most of the real work lives.
-
----
-
-### ❓ 5. What is our HUMAN-IN-THE-LOOP strategy?
-
-| Stage | What it means | When to use |
-|---|---|---|
-| 🐛 **CRAWL** | All AI outputs reviewed by humans before being acted on | Starting out, or for high-stakes outputs |
-| 🚶 **WALK** | AI handles internal workflows autonomously | Once accuracy is proven internally |
-| 🏃 **RUN** | AI interacts directly with external users | Only after earning trust at Walk stage |
-
-> **Start at Crawl. Earn the right to Run by proving accuracy at each stage.**
-
----
-
-## ⭐ Key Takeaway
-
-> *It's easy to build a cool AI demo. It's hard to build a reliable AI product.*
+> ### 🔑 Two Key Consequences of Scaling
 >
-> Your job as a PM is to bridge that gap — with **clear metrics**, **realistic timelines**, and the **right human oversight**.
+> 1. AI models are becoming more powerful → enabling more applications
+> 2. Training large models requires massive data, compute & talent → only a few orgs can do it
+>
+> → This gave rise to **"Model as a Service"**: use powerful models via API without building your own
+
+The result: demand for AI applications shot up while the barrier to building them collapsed. This created **AI Engineering** — the fastest-growing engineering discipline.
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 1–2*
+
+---
+
+## 1.1 From Language Models → LLMs → Foundation Models
+
+### Language Models: The Basics
+
+| Term | Definition |
+|------|-----------|
+| **Language Model** | Encodes statistical information about language — tells us how likely a word is to appear in a given context. Think of it as a **completion machine**. |
+
+Quick history: Claude Shannon's 1951 landmark paper *"Prediction and Entropy of Printed English"* introduced concepts (including entropy) still used in language modeling today.
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 3*
+
+---
+
+### 🪙 Tokens — The Basic Unit
+
+A language model does not work with letters or full words — it works with **tokens**. A token can be a character, a word, or a part of a word (like `-tion`), depending on the model.
+
+> ### 📌 Example: How GPT-4 Tokenises a Phrase
+>
+> **Phrase:** `"I can't wait to build AI applications"`
+>
+> **Tokens:** `I` | `can` | `'t` | `wait` | `to` | `build` | `AI` | `applic` | `ations` → **9 tokens**
+>
+> **Rule of thumb:** ~1 token ≈ ¾ of a word. So **100 tokens ≈ 75 words**.
+>
+> | Model | Vocabulary Size |
+> |-------|----------------|
+> | GPT-4 | 100,256 tokens |
+> | Mixtral 8x7B | 32,000 tokens |
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 3 (Figure 1-1)*
+
+**Why tokens and not words?**
+
+- Tokens break words into meaningful parts (e.g., `'cooking'` → `'cook'` + `'ing'`)
+- Fewer unique tokens than unique words → smaller vocabulary → more efficient model
+- Tokens help process unknown/made-up words (e.g., `'chatgpting'` → `'chatgpt'` + `'ing'`)
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 4*
+
+---
+
+### 🧠 Two Types of Language Models
+
+| Feature | Masked LM (e.g. BERT) | Autoregressive LM (e.g. GPT) |
+|---------|----------------------|------------------------------|
+| **What it predicts** | Missing token ANYWHERE in a sequence | NEXT token using only preceding tokens |
+| **Context used** | Both before AND after the masked token | Only tokens that came before |
+| **Good for** | Classification, sentiment analysis, code debugging | Text generation, chat, writing |
+| **Key example** | BERT (Devlin et al., 2018) | GPT-4, Claude, LLaMA |
+| **Popular today?** | Less popular | **Dominant** — what most people mean by "LLM" |
+
+```
+Autoregressive LM:
+"Why does the chicken cross the" → [prediction]
+                Context: previous tokens only ↑
+
+Masked LM:
+"Why does the [prediction] cross the road"
+         Context: surrounding tokens ↑ ↓
+```
+*Figure 1-2: Autoregressive vs Masked Language Models — Chip Huyen, AI Engineering, p. 5*
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 4–5 (Figure 1-2)*
+
+---
+
+> ### ⚡ Key Insight: Completion = Power
+>
+> A language model is a **COMPLETION MACHINE**. Given `"To be or not to be"`, it predicts `", that is the question."`
+>
+> This simple idea unlocks many tasks:
+> - **Translation** → `"How are you in French is…"` → `"Comment ça va"`
+> - **Spam detection** → `"Is this email spam? Answer:"` → `"Yes, likely spam"`
+> - **Summarisation, coding, Q&A, maths** — all can be framed as completion tasks!
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 5–6*
+
+---
+
+### ⚙️ Self-Supervision: The Secret to Scale
+
+Traditional ML needs labelled data, which is expensive. Language modelling is **self-supervised** — the model infers its own labels directly from the raw text.
+
+**Example:** The sentence `"I love street food."` gives **6 training samples automatically:**
+
+| Input (context) | Output (next token to predict) |
+|----------------|-------------------------------|
+| `<BOS>` | `I` |
+| `<BOS>, I` | `love` |
+| `<BOS>, I, love` | `street` |
+| `<BOS>, I, love, street` | `food` |
+| `<BOS>, I, love, street, food` | `.` |
+| `<BOS>, I, love, street, food, .` | `<EOS>` |
+
+*Table 1-1: Self-supervised training samples — Chip Huyen, AI Engineering, p. 7*
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 7 (Table 1-1)*
+
+> ### 🔑 Why This Matters for Scale
+>
+> Text is **EVERYWHERE** — books, blogs, Reddit, Wikipedia, code repos.
+>
+> No labelling cost → unlimited training data → models can scale to **billions of parameters**.
+>
+> **This is why LLMs could exist at all!**
+
+---
+
+### 📏 Model Size & Parameters
+
+| Term | Definition |
+|------|-----------|
+| **Parameter** | A variable inside an ML model that is updated during training. More params generally = more capacity to learn *(but not always)*. |
+
+| Model | Year | Parameters | Status at the time |
+|-------|------|-----------|-------------------|
+| GPT-1 | June 2018 | 117 million | Considered "large" |
+| GPT-2 | February 2019 | 1.5 billion | Made GPT-1 look "small" |
+| GPT-4 (estimated) | 2023 | ~1 trillion (rumoured) | State of the art |
+| Threshold today | 2024 | ~100 billion+ | Considered "large" |
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 8*
+
+> **💡 Note:** Bigger models need MORE data because they have more capacity to fill — training a huge model on a small dataset wastes compute. You could've achieved the same result with a smaller model.
+
+---
+
+### 🌐 From LLMs to Foundation Models
+
+Language models are limited to text. But humans perceive the world through vision, audio, touch, etc. To operate in the real world, AI needs to go **multimodal**.
+
+| Term | Definition |
+|------|-----------|
+| **Foundation Model** | A large-scale model (text + potentially image/audio/video) that can be used as a base ("foundation") for many downstream tasks. Examples: GPT-4, Claude 3, Gemini. |
+| **Multimodal Model** | A model that can work with more than one data modality (e.g., text + images). Also called **LMM** (Large Multimodal Model). |
+
+> ### 📌 How Multimodal Models Work
+>
+> ```
+> Text tokens: "This is a"  ──┐
+>                              ├──► Multimodal Model ──► Next token: "Puppy"
+> Visual tokens: [🐶 image] ──┘
+> ```
+> *Figure 1-3: Multimodal model token generation — Chip Huyen, AI Engineering, p. 9*
+>
+> **OpenAI's CLIP (2021):** trained on **400 million** (image, text) pairs from the internet — zero manual labelling cost. This made CLIP the first model to generalise across multiple image classification tasks without extra training.
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 9–10 (Figure 1-3)*
+
+Foundation models also mark the shift from **task-specific → general-purpose models**:
+
+- ❌ **Old way:** a spam classifier ONLY does spam; a translation model ONLY translates
+- ✅ **New way:** one foundation model can do spam classification AND translation AND coding AND maths
+
+**Three techniques to adapt a foundation model to your needs:**
+
+| Technique | What it does | Changes weights? |
+|-----------|-------------|-----------------|
+| **Prompt Engineering** | Give the model better instructions | ❌ No |
+| **RAG** | Connect model to an external knowledge database | ❌ No |
+| **Finetuning** | Continue training on your own dataset | ✅ Yes |
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 11*
+
+---
+
+## 1.2 Why AI Engineering Exploded: 3 Key Factors
+
+| Factor | What it means | Example |
+|--------|--------------|---------|
+| **1. General-purpose AI capabilities** | Foundation models can do MORE tasks than ever — including tasks previously impossible | AI now writes emails, generates images, writes code, synthesises training data |
+| **2. Increased AI investment** | ChatGPT's success triggered massive investment. Cost of AI use cases dropped **100x** in 1 year (2022→2023) | Goldman Sachs: AI investment heading toward **$200B globally by 2025** |
+| **3. Low entry barrier (Model as a Service)** | Models exposed via simple APIs — no infrastructure needed. Even non-coders can build AI apps | OpenAI, Anthropic, Mistral, Cohere all offer pay-per-use API access |
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 12–14*
+
+> ### 📊 How Fast is AI Engineering Growing?
+>
+> - **4 open-source AI tools** (AutoGPT, Stable Diffusion WebUI, LangChain, Ollama) got **more GitHub stars in 2 years** than Bitcoin accumulated in a decade
+> - **LinkedIn (Aug 2023):** professionals adding "Generative AI" / "ChatGPT" / "Prompt Engineering" to their profiles grew an average of **75% per month**
+> - **ComputerWorld declared:** *"Teaching AI to behave is the fastest-growing career skill"*
+
+*Figure 1-6: GitHub star growth of AI engineering tools vs Bitcoin, Vue, React — Chip Huyen, AI Engineering, p. 15*
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 14 (Figure 1-6)*
+
+---
+
+## 1.3 Foundation Model Use Cases
+
+The book analysed **205 open-source AI apps** (500+ GitHub stars) and **50 enterprise case studies**.
+
+```
+Distribution of AI Application Categories (n=205)
+─────────────────────────────────────────────────
+Coding                    ██████████████████ 30.4%
+Conversational Bots       ████████████████  26.5%
+Info Aggregation          ████████          12.7%
+Image & Video Production  ████████          12.7%
+Workflow Automation       ███████           11.3%
+Writing                   ██                 3.4%
+Education                 █                  1.5%
+Data Organisation         █                  1.5%
+```
+*Figure 1-7: Use case distribution — Chip Huyen, AI Engineering, p. 19*
+
+| Category | Consumer Examples | Enterprise Examples |
+|----------|------------------|---------------------|
+| **Coding** (30.4%) | Code completion, screenshot-to-code, AI commits | Automated testing, code migration, documentation |
+| **Conversational Bots** (26.5%) | General chatbot, AI companion, therapy bot | Customer support, product copilots, NPC characters in games |
+| **Info Aggregation** (12.7%) | Summarise websites, talk-to-your-docs | Market research, summarise Slack/emails, competitor tracking |
+| **Image & Video** (12.7%) | Profile photo generation, photo editing | Ad generation, marketing visuals, design |
+| **Workflow Automation** (11.3%) | Travel planning, event booking, form filling | Lead management, data extraction, invoicing |
+| **Writing** (3.4%) | Email drafting, social posts, essay writing | Copywriting, SEO content, performance reports |
+| **Education** (1.5%) | Tutoring, language learning (Duolingo) | Employee onboarding, training, quiz generation |
+| **Data Organisation** (1.5%) | Image search, photo memex | Document processing, knowledge management |
+
+*Table 1-3: Common generative AI use cases — Chip Huyen, AI Engineering, p. 18*
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 18 (Table 1-3, Figure 1-7)*
+
+> ### 💡 Enterprise Deployment Pattern (a16z 2024 Research)
+>
+> Companies deploy **INTERNAL** apps first (lower risk):
+>
+> | Use Case | % Deployed to Production |
+> |----------|-------------------------|
+> | Text summarisation | **62%** |
+> | Enterprise knowledge management | **60%** |
+> | Customer service | 59% |
+> | Marketing copy | 53% |
+> | Software development | 53% |
+> | Contract review | 45% |
+> | External chatbot | 39% |
+> | Recommendation algorithm | 39% |
+>
+> *Figure 1-8 — Chip Huyen, AI Engineering, p. 19*
+>
+> **Lesson:** If building for a company, **start with an internal tool** to prove value!
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 19 (Figure 1-8)*
+
+---
+
+## 1.4 Planning an AI Application — Key Questions to Ask
+
+### Step 1: Should You Build It at All?
+
+| Risk Level | Situation | Action |
+|-----------|-----------|--------|
+| 🔴 **Existential** | AI could make your business obsolete (e.g., document processing, financial analysis) | AI adoption must be **highest priority** — no choice |
+| 🟡 **Opportunity** | AI can boost profits & productivity (most companies) | Build strategically — evaluate ROI carefully |
+| 🟢 **Exploratory** | Unsure where AI fits but don't want to fall behind | Invest in R&D — experiment to learn (if budget allows) |
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 29*
+
+---
+
+### Step 2: What Role Does AI Play?
+
+- **Critical vs Complementary** — Is the app useless without AI (Face ID) or does AI just enhance it (Gmail Smart Compose)?
+- **Reactive vs Proactive** — Does AI respond to user action (chatbot) or trigger itself opportunistically (Google Maps traffic alerts)?
+- **Dynamic vs Static** — Is the model updated continuously per user (personalised) or updated periodically for all users?
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 30*
+
+---
+
+### Step 3: Human-in-the-Loop (Microsoft Crawl-Walk-Run Framework)
+
+> ### 🚦 Microsoft's 3-Stage AI Automation Framework
+>
+> | Stage | Human Involvement | Example |
+> |-------|-----------------|---------|
+> | 🐛 **CRAWL** | Mandatory — AI only assists | AI suggests responses; human agent chooses which to send |
+> | 🚶 **WALK** | AI interacts with internal employees | AI handles internal helpdesk tickets autonomously |
+> | 🏃 **RUN** | Increased automation; AI talks to external users | AI responds to customers directly for simple requests |
+>
+> **Key:** Move from Crawl → Run gradually as quality improves (e.g., when 95% of AI suggestions are used verbatim by human agents)
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 31 (Microsoft, 2023)*
+
+---
+
+### ⚠️ The 'Last Mile' Problem — Critical Warning!
+
+> ### ⚠️ Do NOT Underestimate the Gap Between Demo and Product
+>
+> **LinkedIn's real experience building an AI feature:**
+>
+> ```
+> Month 1:        0% ──────────────────────────► 80%  ✅ Fast & easy
+> Next 4 months: 80% ──────────────────────────► 95%  😰 BRUTALLY slow
+> ```
+>
+> **Cause:** Edge cases, hallucinations, product kinks, evaluation overhead
+>
+> > *"The journey from 0 to 60 is easy; progressing from 60 to 100 is exceedingly challenging."*
+> > — Ding et al., UltraChat (2023)
+>
+> **Plan for this. Budget 4–5x more time than your demo suggests.**
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 33–34*
+
+---
+
+## 1.5 The AI Engineering Stack
+
+AI Engineering evolved out of ML Engineering. The stack has **three layers:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│           LAYER 1: APPLICATION DEVELOPMENT                       │
+│                  (Most active — last 2 years)                    │
+│  ┌─────────────────────┐  ┌──────────────────────────────────┐  │
+│  │  What it is         │  │  Responsibilities                │  │
+│  │                     │  │  • Prompt engineering            │  │
+│  │  Building apps on   │  │  • Context construction (RAG)    │  │
+│  │  top of models via  │  │  • Evaluation                    │  │
+│  │  prompts, RAG, eval │  │  • AI interface design           │  │
+│  └─────────────────────┘  └──────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────┤
+│                LAYER 2: MODEL DEVELOPMENT                        │
+│  ┌─────────────────────┐  ┌──────────────────────────────────┐  │
+│  │  What it is         │  │  Responsibilities                │  │
+│  │                     │  │  • Modelling & training          │  │
+│  │  Training, finetune,│  │  • Dataset engineering           │  │
+│  │  dataset eng.,      │  │  • Inference optimisation        │  │
+│  │  inference optim.   │  │  • Evaluation                    │  │
+│  └─────────────────────┘  └──────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────┤
+│     LAYER 3: INFRASTRUCTURE  (Most stable — core unchanged)      │
+│  ┌─────────────────────┐  ┌──────────────────────────────────┐  │
+│  │  What it is         │  │  Responsibilities                │  │
+│  │                     │  │  • Model serving                 │  │
+│  │  Serving, compute,  │  │  • Compute management            │  │
+│  │  data, monitoring   │  │  • Data management               │  │
+│  │                     │  │  • Monitoring                    │  │
+│  └─────────────────────┘  └──────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+*Figure 1-14: Three layers of the AI engineering stack — Chip Huyen, AI Engineering, p. 38*
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 37–38 (Figure 1-14)*
+
+---
+
+### ⚔️ AI Engineering vs Traditional ML Engineering — Key Differences
+
+| Area | Traditional ML Engineering | AI Engineering |
+|------|---------------------------|----------------|
+| **Model source** | Build your own model from scratch | Use someone else's pre-trained model (API or open source) |
+| **Main focus** | Modelling, training, feature engineering | Model adaptation, prompt engineering, evaluation |
+| **ML knowledge required?** | Yes — must understand gradient descent, architectures etc. | Nice-to-have, no longer mandatory to start |
+| **Model size & compute** | Smaller models, lower inference cost | Bigger models, higher latency & cost → inference optimisation critical |
+| **Outputs** | Usually close-ended (classification, regression) | Open-ended (free text, images) → evaluation is MUCH harder |
+| **Dataset engineering** | Feature engineering on tabular data | Deduplication, tokenisation, context retrieval, quality control |
+| **Workflow order** | `Data → Model → Product` | `Product → Data → Model` (iterate fast!) |
+
+*Tables 1-4 & 1-6 — Chip Huyen, AI Engineering, p. 43 & 46*
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 39–43 (Tables 1-4, 1-6)*
+
+---
+
+### 🏷️ Training Terminology — Know the Difference!
+
+> ### Pre-training vs Finetuning vs Post-training
+>
+> | Term | What happens | Who does it | Resources needed |
+> |------|-------------|-------------|-----------------|
+> | **Pre-training** | Train from scratch — weights randomly initialised. For InstructGPT: uses ~**98% of all compute & data**! | OpenAI, Anthropic, Google, Meta… | 🔴 Extreme — weeks/months |
+> | **Finetuning** | Continue training a pre-trained model. Weights from previous run. | Application developers (you!) | 🟡 Moderate |
+> | **Post-training** | Everything after pre-training (SFT, RLHF, DPO). Makes model safe & helpful. | Model developers before release | 🟡 Moderate |
+> | **Prompt Engineering** | NOT training! Teaching via context, not changing weights. | Anyone | 🟢 Zero |
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 41–42*
+
+---
+
+### 🗺️ Model Adaptation Techniques — Quick Reference
+
+| Technique | Changes weights? | Data needed | Complexity | When to use |
+|-----------|-----------------|-------------|-----------|-------------|
+| **Prompt Engineering** | ❌ No | 0 examples (zero-shot) to ~50 (few-shot) | 🟢 Low — **start here** | Always try first. Best for exploration. |
+| **RAG** | ❌ No | Your own knowledge base/docs | 🟡 Medium | When model needs up-to-date or proprietary info |
+| **Finetuning** | ✅ Yes | Hundreds to thousands of examples | 🔴 High | When prompt engineering hits a ceiling |
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 1, p. 40*
+
+---
+
+# Chapter 2: Understanding Foundation Models
+
+To build AI applications effectively, you need a working mental model of what's happening inside foundation models. You don't need to implement one — but you **do** need to understand the design choices that affect your downstream applications.
+
+> ### What Shapes a Model's Capabilities? (Chip Huyen's Framework)
+>
+> | # | Factor | Why it matters |
+> |---|--------|---------------|
+> | 1 | **Training Data** | What the model learned from → what it knows / doesn't know |
+> | 2 | **Model Architecture** | Mostly transformer-based; shapes speed, context window, capabilities |
+> | 3 | **Model Size** | More parameters ≠ always better; must balance capacity vs compute vs latency |
+> | 4 | **Post-Training** | How the model was aligned to be helpful, safe, and follow instructions |
+> | 5 | **Sampling** | How the model *chooses* its output from all possible options — **hugely underrated!** |
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 2, p. 49–50*
+
+---
+
+## 2.1 Training Data
+
+> *"An AI model is only as good as the data it was trained on."* — Chip Huyen
+
+| Data Source | What it is | Quality concern |
+|-------------|-----------|----------------|
+| **Common Crawl** | Nonprofit crawls 2–3 billion web pages/month. Free and massive. | ⚠️ Low quality — clickbait, fake news, propaganda, racist content |
+| **C4** (Colossal Clean Crawled Corpus) | Google's cleaned subset of Common Crawl | Still contains low-trustworthiness media (NewsGuard data) |
+| **Books / Papers** | High quality, formal writing, domain knowledge | Copyright issues; limited volume |
+| **Code (GitHub)** | High-quality, structured, logical text | Licence issues; biased toward popular languages |
+| **Wikipedia** | Factual, encyclopaedic, multilingual | Reflects Wikipedia's own biases and gaps |
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 2, p. 50 (Washington Post study on Common Crawl)*
+
+> ### 🧠 Practical Implication for AI Engineers
+>
+> Understanding a model's training data tells you a LOT about its strengths and weaknesses:
+>
+> | If training data contains… | Then the model… |
+> |---------------------------|----------------|
+> | Heavy code corpus | ✅ Great at coding tasks |
+> | Mostly English text | ⚠️ Poor on low-resource languages |
+> | Knowledge cutoff date | ❌ Won't know about recent events |
+> | Common Crawl heavily | ⚠️ May have absorbed misinformation |
+>
+> **This is why you must EVALUATE models on YOUR specific use case — don't just trust benchmarks!**
+
+> 📖 *Chip Huyen, AI Engineering, Chapter 2, p. 50*
+
+---
+
+# 📖 Quick Reference Glossary
+
+| Term | Definition |
+|------|-----------|
+| **AI Engineering** | Building applications on top of pre-trained foundation models. Focus on adaptation and evaluation rather than model building. |
+| **Foundation Model** | A large-scale, general-purpose model trained on broad data that can be adapted to many tasks. Encompasses both LLMs and multimodal models. |
+| **LLM** | Large Language Model — a very large autoregressive language model. Technically text-only, but often used loosely for any big AI model. |
+| **Token** | The basic unit a language model processes. Roughly ¾ of a word on average. GPT-4 uses ~100,256 unique tokens. |
+| **Self-supervision** | A training approach where labels are derived from the input data itself (no manual labelling needed). Critical for LLMs to scale. |
+| **Parameter** | A variable in an ML model updated during training. More parameters generally = more capacity. *Not the same as tokens!* |
+| **Prompt Engineering** | Adapting a model's behaviour through carefully crafted input instructions — without changing model weights. |
+| **RAG** | Retrieval-Augmented Generation — connecting a model to an external knowledge source to supplement its context. |
+| **Finetuning** | Continuing to train a pre-trained model on new data to specialise it for a task. Changes model weights. |
+| **Pre-training** | Training a model from scratch on massive data. Extremely resource-intensive. Done by very few organisations. |
+| **Post-training** | Training done after pre-training — e.g. instruction tuning, RLHF. Makes models safe and easy to use. |
+| **RLHF** | Reinforcement Learning from Human Feedback — a post-training technique where humans rate outputs to align the model. |
+| **Inference** | Running a trained model to produce an output given an input. Cost and latency of inference is a major concern at scale. |
+| **Hallucination** | When a model generates plausible-sounding but factually wrong output. Results from its probabilistic, completion-based nature. |
+| **Autoregressive LM** | A language model that predicts the next token using only previous tokens. The dominant approach today (GPT, Claude, LLaMA). |
+| **Masked LM** | A language model that predicts missing tokens using context from both sides (e.g., BERT). Better for classification tasks. |
+| **Multimodal model** | A model that can work with multiple data types — e.g., both text and images (GPT-4V, Claude 3, Gemini). |
+| **Model as a Service** | Business model where powerful models are exposed via API. Democratises access to AI without requiring own infrastructure. |
+| **Generalisation** | A model's ability to perform well on unseen data / tasks it wasn't explicitly trained on. |
+| **Benchmark** | A standardised test to evaluate model performance. Example: MMLU (Massive Multitask Language Understanding). |
+
+> 📖 *All definitions: Chip Huyen, AI Engineering, Chapters 1–2*
+
+---
+
+# ✅ Action Checklist for Aspiring AI Engineers
+
+### Before Building Anything
+
+- [ ] Understand the difference between pre-training, finetuning, post-training, and prompt engineering
+- [ ] Know your goal: are you doing application development (Layer 1) or model development (Layer 2)?
+- [ ] Ask: can I solve this with prompt engineering alone before investing in finetuning?
+- [ ] Always evaluate the base model first — it may already do 60–80% of what you need
+
+### When Choosing a Model
+
+- [ ] Understand what training data it was trained on — this reveals its strengths and blind spots
+- [ ] Run your own evaluation on YOUR use case — don't just trust public benchmarks (they can be misleading)
+- [ ] Check the tokeniser vocabulary — especially important for non-English or technical domains
+- [ ] Consider: is this model well-aligned via post-training? Is it safe for your use case?
+
+### When Scoping the Project
+
+- [ ] Define usefulness threshold early: what quality level makes this worth deploying?
+- [ ] Plan for the 'last mile': the gap from 80% → 95% quality takes **4–5x** more time than 0% → 80%
+- [ ] Decide role of humans: **Crawl** (human in the loop) → **Walk** → **Run** (full automation)
+- [ ] Think about product defensibility: what's your moat? Technology, data, or distribution?
+
+### Technical Skills to Build Next
+
+- [ ] **Prompt engineering:** structured instructions, chain-of-thought, few-shot examples *(Chapter 5)*
+- [ ] **RAG fundamentals:** embeddings, vector databases, retrieval algorithms *(Chapters 4–6)*
+- [ ] **Evaluation frameworks:** how to measure open-ended outputs reliably *(Chapter 3)*
+- [ ] **Finetuning basics:** when and how to update model weights *(Chapter 7)*
+- [ ] **Sampling & temperature:** understanding how models choose their outputs *(Chapter 2)*
+
+---
+
+> 📖 **All content sourced from:**
+> *Chip Huyen, AI Engineering: Building Applications with Foundation Models (O'Reilly Media)*
