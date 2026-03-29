@@ -1,0 +1,377 @@
+# Model Architecture: RNN vs Transformer
+
+> **Detailed Study Notes with Worked Example**
+>
+> Running Example: *"How long do cats live?"*
+>
+> Based on: *AI Engineering* by Chip Huyen (O'Reilly)
+
+---
+
+## Table of Contents
+
+- [1. The Big Picture: What a Language Model Does](#1-the-big-picture-what-a-language-model-does)
+- [2. RNN (Recurrent Neural Network): The Old Way](#2-rnn-recurrent-neural-network-the-old-way)
+- [3. Transformer: The Breakthrough](#3-transformer-the-breakthrough)
+- [4. Transformer Processing — Complete Walkthrough](#4-transformer-processing--complete-walkthrough)
+- [5. RNN vs Transformer: Direct Comparison](#5-rnn-vs-transformer-direct-comparison)
+- [6. Understanding "Weights": The Two Types](#6-understanding-weights-the-two-types)
+- [7. Key Insights to Remember](#7-key-insights-to-remember)
+
+---
+
+## 1. The Big Picture: What a Language Model Does
+
+A language model is a **completion machine**. Given an input (prompt), it predicts the most probable next token, one at a time. It does not "know" answers — it generates them by pattern-matching against statistical relationships learned during training.
+
+### 1.1 Where Does the "Knowledge" Come From?
+
+Nobody teaches the model that cats live 12–18 years. During training, the model read billions of pages of text containing sentences like:
+
+- *"The average lifespan of a domestic cat is around 12 to 18 years"*
+- *"Indoor cats typically live between 15 and 20 years"*
+- *"How long do cats live? Most cats live 12 to 18 years"*
+
+The model never memorised these sentences. Instead, it adjusted its **parameters** (weights) so that when the pattern "cats typically live ___" appears, numbers like 12, 15, 18 have high probability and words like "purple" have near-zero probability.
+
+> 💡 **Key insight:** The model's "knowledge" is an emergent side effect of statistical pattern matching at massive scale. This is also why LLMs hallucinate — the pattern is strong enough to generate confident answers even about things that don't exist.
+
+### 1.2 Autoregressive Generation: Step by Step
+
+When you type **"How long do cats live?"**, the model generates its response one token at a time:
+
+| Step | Model sees | Predicts | Probability |
+|------|-----------|----------|-------------|
+| 1 | `How long do cats live?` | **Cats** | 0.72 |
+| 2 | `How long do cats live? Cats` | **typically** | 0.45 |
+| 3 | `How long do cats live? Cats typically` | **live** | 0.82 |
+| 4 | `How long do cats live? Cats typically live` | **12** | 0.35 |
+| 5 | `How long do cats live? Cats typically live 12` | **to** | 0.91 |
+| 6 | `How long do cats live? Cats typically live 12 to` | **18** | 0.40 |
+| 7 | `How long do cats live? Cats typically live 12 to 18` | **years.** | 0.88 |
+
+At each step, the model assigns probabilities to every possible next token. At step 4, "12" might have 35% probability, "10" might have 22%, "15" might have 18%. The model **samples** from this distribution. This is why you sometimes get slightly different answers to the same question.
+
+But before the model can generate anything, it must first **understand the context** of your input. This is where the architecture matters — and where RNNs fail and Transformers succeed.
+
+---
+
+## 2. RNN (Recurrent Neural Network): The Old Way
+
+### 2.1 How an RNN Processes Input
+
+An RNN processes text **one word at a time, in order**, passing a "hidden state" forward like a baton in a relay race. At each step, it combines the current word with whatever it remembers from previous words.
+
+The RNN has **one weight matrix (`W_h`)** — this single matrix must do everything: understand the current token AND compress memory from previous tokens into a fixed-size vector.
+
+### 2.2 Worked Example: RNN Processing "How long do cats live?"
+
+#### Step 1: "How" enters
+
+```
+"How" [0.3, 0.9, 0.1]  ×  W_h  =  h₁ = [0.7, 0.4, 0.8]
+```
+
+- h₁ encodes: *"this is a question word."*
+- Memory of "How": **100%** — perfect, only one word so far.
+
+#### Step 2: "long" enters
+
+```
+h₁ [0.7, 0.4, 0.8]  +  "long" [0.6, 0.8, 0.3]  ×  W_h  =  h₂ = [0.6, 0.7, 0.5]
+```
+
+- h₂ encodes: *"question about duration."*
+- Memory of "How": **~65%** — already compressed.
+
+> ⚠️ **Critical limitation:** h₂ is the same size as h₁ (same 3 numbers). It must now encode TWO words' meaning in the same space that held one. Information is being compressed.
+
+#### Step 3: "do" enters
+
+```
+h₂ [0.6, 0.7, 0.5]  +  "do" [0.1, 0.3, 0.2]  ×  W_h  =  h₃ = [0.4, 0.5, 0.4]
+```
+
+- h₃ encodes: *"some kind of question... about duration maybe?"*
+- Memory of "How": **~35%** — fading fast.
+
+#### Step 4: "cats" enters
+
+```
+h₃ [0.4, 0.5, 0.4]  +  "cats" [0.8, 0.2, 0.5]  ×  W_h  =  h₄ = [0.7, 0.3, 0.6]
+```
+
+- h₄ encodes: *"something about cats... a question?"*
+- Memory of "How": **~15%** — nearly gone.
+- Memory of "long": **~25%** — the duration instruction is fading.
+
+#### Step 5: "live?" enters
+
+```
+h₄ [0.7, 0.3, 0.6]  +  "live?" [0.5, 0.6, 0.9]  ×  W_h  =  h₅ = [0.5, 0.5, 0.7]
+```
+
+- h₅ is the **only thing the model has** when it starts generating the answer.
+
+**Memory state at h₅:**
+
+```
+"How"   ████░░░░░░░░░░░░░░░░░░░░░  ~8%   ← NEARLY GONE
+"long"  ██████░░░░░░░░░░░░░░░░░░░  ~12%  ← NEARLY GONE
+"do"    █████████░░░░░░░░░░░░░░░░  ~18%
+"cats"  ██████████████████░░░░░░░  ~55%
+"live?" █████████████████████████  ~95%
+```
+
+> 🚨 **The failure:** "How long" — which tells the model to answer with a number range — has nearly vanished. The model might generate *"Cats live a wonderful life"* instead of *"Cats typically live 12 to 18 years"* because it lost the duration instruction.
+
+### 2.3 The Two Fatal Problems with RNNs
+
+| Problem | Explanation |
+|---------|-------------|
+| **Vanishing memory** | The hidden state is a fixed-size vector that gets overwritten at every step. By the time the RNN reaches "live?", its memory of "How" has faded to ~8%. For long sentences, early context effectively disappears. |
+| **Sequential bottleneck** | Each step MUST wait for the previous step to finish. You can't process "cats" until "do" is done. This means RNNs can't be parallelised on GPUs, making them painfully slow to train. At ~10ms per token, a 100-token input takes 1 second just to read. |
+
+---
+
+## 3. Transformer: The Breakthrough
+
+The Transformer was introduced in the 2017 paper "Attention Is All You Need." Instead of reading words one-by-one like an RNN, the transformer looks at **all words simultaneously** and asks: "For each word, which other words should I pay attention to?"
+
+### 3.1 The Core Components: Three Weight Matrices
+
+The transformer has **three permanent weight matrices** (per attention layer), learned during training and saved as part of the model file. These are the "filter machines" that transform each token into three specialised versions:
+
+| Matrix | Name | Analogy | Purpose |
+|--------|------|---------|---------|
+| **W_Q** | Query | Your wishlist | "What am I looking for?" — highlights the aspects of a token that help it search for relevant partners |
+| **W_K** | Key | Your name badge | "What do I offer?" — highlights the aspects that help OTHER tokens decide if this token is relevant to them |
+| **W_V** | Value | Your briefcase | "What's my actual meaning?" — carries the real semantic content that gets shared when another token pays attention |
+
+> 💡 **Why three matrices, not one?** A single representation of "cats" can't encode "I need verbs" (Query), "I am a noun" (Key), and "I mean feline" (Value) all at once with equal clarity. Three specialised versions solve this.
+
+### 3.2 Where Do These Matrices Come From?
+
+```
+Day 0 (Before training)     →  W_Q filled with random numbers (noise)
+                                Model produces garbage predictions
+
+Training (weeks on GPUs)    →  Model reads billions of sentences, tries to
+                                predict next word, gets it wrong, adjusts
+                                W_Q/W_K/W_V numbers slightly via gradient
+                                descent. Repeated billions of times.
+
+After training              →  W_Q/W_K/W_V contain useful values.
+                                The model file IS these matrices.
+```
+
+When people say "Llama 3 is a 70B model and the download is 140GB" — that 140GB file is mostly these matrices. **No human chose these numbers.** The training algorithm found them automatically through trial and error at massive scale.
+
+### 3.3 How the Multiplication Works
+
+The multiplication is a **filter** — you feed in a token's embedding vector, the matrix amplifies some aspects and dampens others, and out comes a purpose-built version.
+
+```
+Same W_Q machine, different inputs, different outputs:
+
+"cats"  → [W_Q machine] → Q_cats  = "I need verbs about duration/lifespan"
+"How"   → [W_Q machine] → Q_How   = "I need words like long/much/many"
+"live?" → [W_Q machine] → Q_live? = "I need the subject — who lives?"
+```
+
+The W_Q matrix is the **same for every token** — what makes each output different is the token itself. Same machine, different inputs, different results.
+
+---
+
+## 4. Transformer Processing — Complete Walkthrough
+
+### Phase 1: All Tokens Get Embeddings Simultaneously
+
+Unlike the RNN which reads one at a time, the transformer loads **ALL tokens at once**:
+
+```
+"How"   → [0.3, 0.9, 0.1]
+"long"  → [0.6, 0.8, 0.3]
+"do"    → [0.1, 0.3, 0.2]
+"cats"  → [0.8, 0.2, 0.5]
+"live?" → [0.5, 0.6, 0.9]
+```
+
+All five embeddings exist in memory at the same time. **No compression. No overwriting.** Each word keeps its full identity throughout.
+
+### Phase 2: Every Token × W_Q, W_K, W_V → Query, Key, Value
+
+All 5 tokens are transformed **in parallel** — not one after another:
+
+**Queries (wishlists — "what am I looking for?"):**
+
+| Token | Query vector | Meaning |
+|-------|-------------|---------|
+| How | Q_How = [0.87, 0.47, 0.67] | "I need words like long/much/many" |
+| long | Q_long = [0.55, 0.72, 0.38] | "I need the question word and the verb" |
+| do | Q_do = [0.28, 0.34, 0.26] | "I need subject and verb" |
+| cats | Q_cats = [0.46, 0.85, 0.49] | "I need verbs about duration/lifespan" |
+| live? | Q_live? = [0.86, 0.89, 0.65] | "I need the subject — who lives?" |
+
+**Keys (badges — "what do I offer?"):**
+
+| Token | Key vector | Meaning |
+|-------|-----------|---------|
+| How | K_How = [0.37, 0.74, 0.42] | "I'm a question word" |
+| long | K_long = [0.82, 0.53, 0.87] | "I'm about duration/quantity" |
+| do | K_do = [0.12, 0.28, 0.15] | "I'm a grammatical helper" |
+| cats | K_cats = [0.95, 0.53, 0.87] | "I'm a noun, animal, subject" |
+| live? | K_live? = [0.82, 0.75, 1.24] | "I'm a verb about existence/lifespan" |
+
+**Values (briefcases — "what's my actual meaning?"):**
+
+| Token | Meaning carried |
+|-------|----------------|
+| V_How | Question signal |
+| V_long | Duration/extent concept |
+| V_do | Auxiliary grammar marker |
+| V_cats | Domestic feline concept |
+| V_live? | Existence/lifespan concept |
+
+> 💡 **Key difference from RNN:** All 15 vectors (5 Q + 5 K + 5 V) exist separately in memory. Nothing has been compressed or overwritten. Every word retains its full identity.
+
+### Phase 3: Every Query Matched Against Every Key → Attention Scores
+
+Each Query (wishlist) is compared against ALL Keys (badges) using a **dot product**. The dot product is simply: multiply corresponding numbers in pairs, then add the results.
+
+#### Worked Example: Q_cats · K_live?
+
+```
+Q_cats  = [0.46, 0.85, 0.49]
+K_live? = [0.82, 0.75, 1.24]
+
+Step 1:  0.46 × 0.82 = 0.377
+Step 2:  0.85 × 0.75 = 0.638
+Step 3:  0.49 × 1.24 = 0.608
+                        ─────
+Sum:                    1.623  ← HIGH score = strong match
+```
+
+This high score means cats' wishlist ("I need verbs about lifespan") strongly matches what live? advertises ("I'm a verb about lifespan").
+
+#### Compare: Q_cats · K_do
+
+```
+Q_cats = [0.46, 0.85, 0.49]
+K_do   = [0.12, 0.28, 0.15]
+
+Step 1:  0.46 × 0.12 = 0.055
+Step 2:  0.85 × 0.28 = 0.238
+Step 3:  0.49 × 0.15 = 0.074
+                        ─────
+Sum:                    0.367  ← LOW score = poor match
+```
+
+Cats doesn't need what "do" offers.
+
+#### The Full 5×5 Attention Grid
+
+Every Query is dotted against every Key, producing 25 raw scores. These are then passed through **softmax** (converts raw numbers into percentages adding to 100%):
+
+| Q ↓ / K → | How | long | do | cats | live? |
+|------------|-----|------|----|------|-------|
+| **How** | 0.15 | **0.45** | 0.05 | 0.15 | 0.20 |
+| **long** | **0.50** | 0.10 | 0.05 | 0.15 | 0.20 |
+| **do** | 0.20 | 0.15 | 0.05 | **0.30** | **0.30** |
+| **cats** | 0.10 | 0.15 | 0.05 | **0.35** | **0.35** |
+| **live?** | 0.15 | **0.25** | 0.05 | **0.35** | 0.20 |
+
+Read each row as: "this token pays X% attention to each column token." Bold values indicate the strongest connections.
+
+#### What the Attention Weights Mean
+
+Attention weights represent **contextual relevance**. When token A attends strongly to token B, it means: "to understand what I (token A) mean in this sentence, token B is important to me."
+
+- **"How" → "long" (0.45):** "How" cares most about "long" because "How long" is a phrase. Alone, "How" could be "How are you" or "How much." Attending to "long" resolves: I'm part of "How long" = duration question.
+
+- **"long" → "How" (0.50):** Bidirectional confirmation. "long" finds "How" to confirm it means duration, not "a long road."
+
+- **"cats" → "live?" (0.35):** "cats" needs the verb to know it's cats-in-the-context-of-lifespan, not cats-as-pets or cats-as-musical.
+
+- **"live?" → "cats" (0.35):** "live?" needs the subject to know WHO lives. Also attends to "long" (0.25) to know the answer needs a duration.
+
+> 🚨 **This is impossible in an RNN.** In the RNN, "live?" can only see h₄ — a compressed blob where "How" has faded to ~8%. Here, "live?" sees the original "How" at full strength and decides for itself how much attention to pay.
+
+### Phase 4: Blend Values Using Attention Weights → Context-Aware Output
+
+Each token builds its context-aware representation by blending ALL Values, weighted by its attention scores. Tracing "live?" — the last token that starts generation:
+
+```
+Output_live? = 0.15 × V_How    (question signal)
+             + 0.25 × V_long   (duration concept)
+             + 0.05 × V_do     (grammar — mostly ignored)
+             + 0.35 × V_cats   (domestic feline)
+             + 0.20 × V_live?  (lifespan concept)
+```
+
+The result is a vector that encodes: **"This is a question asking for the duration that cats live — answer with a number range."**
+
+> ✅ **Nothing was lost.** The "How long" signal (0.15 + 0.25 = 40% of attention combined) is fully present. The "cats" subject (0.35) is clear. The model has everything it needs to confidently generate *"Cats typically live 12 to 18 years."*
+>
+> **Compare to the RNN:** where "How" was at ~8% and "long" at ~12% — a combined 20% of a compressed, noisy vector vs. 40% of clean, original Values here.
+
+---
+
+## 5. RNN vs Transformer: Direct Comparison
+
+| Dimension | RNN | Transformer |
+|-----------|-----|-------------|
+| **Weight matrices** | One matrix (W_h) does everything | Three specialised matrices (W_Q, W_K, W_V) |
+| **Processing order** | Sequential — one token at a time, each waits for previous | Parallel — all tokens processed simultaneously |
+| **Memory format** | Single fixed-size hidden state vector, overwritten at each step | Every token retains its own separate Q, K, V vectors throughout |
+| **Access to "How" when processing "live?"** | ~8% of original signal, buried in compressed h₅ | 100% of original signal, directly accessible via attention |
+| **Speed (100 tokens)** | ~1 second (sequential, 10ms per step) | One parallel pass on GPU (milliseconds) |
+| **Context length** | Struggles beyond 20–30 words | Handles 100,000+ tokens |
+| **Likely output for our example** | *"Cats live a wonderful life"* (lost duration instruction) | *"Cats typically live 12 to 18 years"* (full context preserved) |
+
+---
+
+## 6. Understanding "Weights": The Two Types
+
+### 6.1 Model Parameters (Trained Weights)
+
+- The millions/billions of numbers inside W_Q, W_K, W_V and other matrices.
+- **Created during training** through gradient descent (trial and error at massive scale).
+- **Fixed after training** — they never change when you ask a question.
+- **This IS the model.** When people say "Llama 3 is a 70B model and the download is 140GB" — that 140GB file is mostly these matrices.
+
+### 6.2 Attention Weights
+
+- Computed **fresh for every single input** — they're different for "How long do cats live?" vs "What's the capital of France?"
+- Determine how much each token pays attention to every other token.
+- Produced by the dot product: Q · K, then softmax.
+
+> 💡 **The trained weights (W_Q, W_K, W_V) are the KNOWLEDGE** — they encode what the model learned from all that text. **The attention weights (0.10, 0.35, etc.) are the APPLICATION** of that knowledge to your specific question. Same trained weights, different attention weights for every different input.
+
+---
+
+## 7. Key Insights to Remember
+
+1. **A language model is a completion machine.** It doesn't "know" facts — it predicts statistically likely next tokens based on patterns from training data.
+
+2. **The model file = a collection of weight matrices** (W_Q, W_K, W_V and others). That's all a model is.
+
+3. **RNNs compress everything into one vector** that gets overwritten at each step. Early context fades (vanishing gradient problem).
+
+4. **Transformers keep every token's representation intact** and use attention to let any token directly access any other token, regardless of distance.
+
+5. **Attention = Query × Key (dot product) → softmax → weighted blend of Values.** This is the complete mechanism.
+
+6. **The dot product measures wishlist-badge alignment.** High dot product = the searching token's needs match what the other token offers.
+
+7. **Softmax converts raw scores to percentages** that add to 100%, creating the final attention weights.
+
+8. **Same model, different attention weights for every input.** The W_Q/W_K/W_V matrices are fixed; only the attention weights change per question.
+
+9. **Transformers process input in parallel, RNNs sequentially.** This is why transformers train orders of magnitude faster and enabled scale-up to GPT-3, GPT-4 and beyond.
+
+10. **LLMs hallucinate because pattern matching is not understanding.** The model doesn't know what it doesn't know.
+
+---
+
+*Notes generated from a deep-dive conversation exploring Chapter 2 concepts from AI Engineering by Chip Huyen (O'Reilly), March 2026.*
