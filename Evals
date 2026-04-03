@@ -1,0 +1,607 @@
+
+> **Book:** *Artificial Intelligence Engineering: Building Applications with Foundation Models* by Chip Huyen
+> **Chapter Focus:** How to measure whether an artificial intelligence model or application is actually performing well
+> **Key Quote:** Greg Brockman (OpenAI co-founder): *"Evaluations are surprisingly often all you need."*
+
+---
+
+## Table of Contents
+
+1. [Chapter Overview — The Big Picture](#1-chapter-overview--the-big-picture)
+2. [Why Evaluating Foundation Models Is Hard](#2-why-evaluating-foundation-models-is-hard)
+3. [Language Modeling Metrics](#3-language-modeling-metrics)
+4. [Exact Evaluation](#4-exact-evaluation)
+5. [Artificial Intelligence as a Judge](#5-artificial-intelligence-as-a-judge)
+6. [Ranking Models with Comparative Evaluation](#6-ranking-models-with-comparative-evaluation)
+7. [Quick-Reference Cheat Sheet](#7-quick-reference-cheat-sheet)
+8. [Common Exam Traps and Things to Remember](#8-common-exam-traps-and-things-to-remember)
+
+---
+
+## 1. Chapter Overview — The Big Picture
+
+Evaluation is the hardest part of shipping artificial intelligence applications. This chapter is entirely dedicated to understanding **how** we measure whether an artificial intelligence model or application is actually good.
+
+There are four evaluation families covered in this chapter:
+
+| Family | Description |
+|---|---|
+| **Language Modeling Metrics** | Understand the underlying language model quality (perplexity, cross entropy) |
+| **Exact Evaluation** | Functional correctness and similarity to reference outputs |
+| **Artificial Intelligence as a Judge** | Using artificial intelligence to evaluate artificial intelligence responses |
+| **Comparative Evaluation** | Ranking models head-to-head using match outcomes |
+
+### Why Evaluation Matters — Real-World Failures Without It
+
+Without proper evaluation, artificial intelligence risk can outweigh artificial intelligence benefit. Documented real-world failures include:
+
+- A man committed suicide after being encouraged by a chatbot
+- Lawyers submitted false evidence that was hallucinated by artificial intelligence
+- Air Canada was ordered to pay damages when its artificial intelligence chatbot gave a passenger false information
+
+### The Investment Gap in Evaluation
+
+Despite exponential growth in large language model evaluation papers (from 2 papers per month to approximately 35 papers per month in the first half of 2023), evaluation tooling still lags significantly behind modelling and orchestration tools:
+
+- Only approximately 50 of the top 1,000 artificial intelligence repositories on GitHub were dedicated to evaluation (as of May 2024)
+- Modelling and training had over 120 repositories
+- Anthropic has called on policymakers to increase government funding for evaluation research
+
+> **Key insight from DeepMind:** "Developing evaluations has received little systematic attention compared to developing algorithms." Experiment results are almost exclusively used to improve algorithms and are rarely used to improve evaluation.
+
+---
+
+## 2. Why Evaluating Foundation Models Is Hard
+
+Traditional machine learning had close-ended tasks (for example, classify an image → compare against a ground truth label). Foundation models are open-ended. There are four key reasons evaluation became much harder:
+
+### The Four Core Challenges
+
+| Challenge | Explanation | Example |
+|---|---|---|
+| **Intelligence Paradox** | Smarter models are harder to evaluate — evaluators need equal or greater expertise to verify outputs | Few people can verify a PhD-level mathematics solution is correct |
+| **Open-endedness** | Infinite valid responses exist for any input — no exhaustive ground truth list can be created | "Comment ça va?" has many valid English translations |
+| **Black Box Models** | Architecture, training data, and process are often hidden — evaluators can only observe outputs | GPT-4 does not disclose training data details |
+| **Scope Creep** | General-purpose models may perform tasks beyond known benchmarks or even human capabilities | Discovering entirely new tasks that artificial intelligence can do unexpectedly |
+
+### The Benchmark Saturation Problem
+
+Benchmarks become useless once models score perfectly. This has happened repeatedly at accelerating speed:
+
+- **GLUE** (General Language Understanding Evaluation) launched in 2018 → saturated in just 1 year → **SuperGLUE** released in 2019
+- **NaturalInstructions** (2021) → replaced by **SuperNaturalInstructions** (2022)
+- **Massive Multitask Language Understanding** (2020) → largely replaced by **Massive Multitask Language Understanding Pro** (2024)
+
+> **Bottom line:** Benchmarks need to constantly evolve to keep up with model capabilities, but investment in creating new benchmarks lags far behind investment in building new models.
+
+---
+
+## 3. Language Modeling Metrics
+
+Foundation models evolved out of language models. Many foundation models still have a language model as their main component. The performance of this language model component tends to be well correlated with downstream application performance.
+
+All four metrics — cross entropy, perplexity, bits-per-character, and bits-per-byte — measure the same underlying thing from different angles. If you know the value of one, you can compute the other three.
+
+---
+
+### 3.1 Entropy
+
+**Definition:** Entropy measures how much information, on average, a single token carries. Higher entropy means more information per token, which also means the language is harder to predict.
+
+**Intuition:** If you can perfectly predict what someone will say next, what they say carries no new information (zero entropy).
+
+**Example:**
+
+| Language | Number of Tokens | Entropy | Meaning |
+|---|---|---|---|
+| 2-token language (upper / lower position) | 2 | 1 bit | Easy to predict — only 1 binary choice |
+| 4-token language (upper-left / upper-right / lower-left / lower-right) | 4 | 2 bits | Harder to predict — 4 possible choices |
+
+---
+
+### 3.2 Cross Entropy
+
+**Definition:** Cross entropy measures how difficult it is for the language model to predict what comes next in a dataset. It has two components:
+
+1. The **predictability** of the training data, measured by the training data's entropy
+2. How much the **distribution learned by the model diverges** from the true distribution of the training data
+
+**Formula:**
+
+```
+H(P, Q) = H(P) + D_KL(P || Q)
+```
+
+Where:
+- `P` = the true distribution of the training data
+- `Q` = the distribution learned by the language model
+- `H(P)` = entropy of the training data
+- `D_KL(P || Q)` = Kullback-Leibler divergence (how far the model's distribution is from the true distribution)
+
+**Key properties:**
+- Cross entropy is **not symmetric**: `H(P, Q) ≠ H(Q, P)`
+- When the model learns perfectly: divergence = 0, so cross entropy = data entropy
+- Training minimises cross entropy
+
+---
+
+### 3.3 Bits-per-Character and Bits-per-Byte
+
+Since different models use different tokenisation methods, the number of bits per token is not comparable across models. These normalised metrics solve that problem:
+
+- **Bits-per-Character (BPC)** = bits per token ÷ average number of characters per token
+- **Bits-per-Byte (BPB)** = BPC ÷ bytes per character (accounts for different character encoding schemes like ASCII versus UTF-8)
+
+**Why this matters:** If a model has a BPB of 3.43, it can represent each original byte (8 bits) using only 3.43 bits — meaning it can compress the original text to less than half its original size.
+
+---
+
+### 3.4 Perplexity
+
+**Definition:** Perplexity is the exponential of cross entropy. It measures the amount of **uncertainty** the model has when predicting the next token. Higher uncertainty means more possible options for the next token.
+
+**Formula:**
+```
+PPL(P, Q) = 2^H(P, Q)          [when using bits as the unit]
+PPL(P, Q) = e^H(P, Q)          [when using nats, as in TensorFlow and PyTorch]
+```
+
+**Intuition example:** If cross entropy = 2 bits, then perplexity = 4. This means the model behaves as if it has 4 equally likely options when predicting the next token. A perplexity of 3 out of a vocabulary of 100,000 tokens is extraordinary — the model has effectively narrowed the field from 100,000 to just 3 candidates.
+
+---
+
+### 3.5 Rules of Thumb for Interpreting Perplexity
+
+| Factor | Effect on Perplexity | Reason |
+|---|---|---|
+| More structured data (for example, HTML code) | Lower perplexity | Opening tag predicts closing tag — more predictable |
+| Larger vocabulary | Higher perplexity | More possible next tokens to choose from |
+| Longer context window | Lower perplexity | More context = less uncertainty about what comes next |
+| Post-training (Supervised Fine-Tuning / Reinforcement Learning from Human Feedback) | Higher perplexity | Post-training "collapses entropy" — model learns to complete tasks, not predict tokens |
+| Quantization | Unpredictable change | Reduces numerical precision in unexpected ways |
+
+---
+
+### 3.6 Practical Uses of Perplexity Beyond Training
+
+Beyond guiding model training, perplexity has several practical applications in the artificial intelligence engineering workflow:
+
+1. **Model capability proxy** — Lower perplexity correlates with better downstream task performance (confirmed by OpenAI's GPT-2 paper: larger models consistently showed lower perplexity across all datasets)
+2. **Data contamination detection** — If a model has suspiciously low perplexity on a benchmark's data, that benchmark was likely included in training data, making benchmark results less trustworthy
+3. **Training data deduplication** — Only add new data to the training dataset if the model's perplexity on that data is high (meaning it has not seen it before)
+4. **Abnormal text detection** — Gibberish and unusual sentences produce very high perplexity
+
+> **Reference numbers from OpenAI's GPT-2 paper:**
+> - 117 million parameter model: WikiText-2 perplexity = 29.41
+> - 1,542 million parameter model: WikiText-2 perplexity = 18.34
+> Larger model = lower perplexity = better performance
+
+---
+
+### 3.7 Important Limitation of Perplexity
+
+> **Warning:** Perplexity is a poor proxy for evaluating models that have been post-trained using Supervised Fine-Tuning or Reinforcement Learning from Human Feedback. As a model gets better at completing tasks, it often gets worse at predicting the next token, so perplexity typically **increases** after post-training even though real-world performance **improves**. Some researchers describe this as post-training "collapsing entropy." Never use perplexity to evaluate instruction-tuned or chat models.
+
+---
+
+## 4. Exact Evaluation
+
+Exact evaluation produces **unambiguous scores** — there is no subjectivity involved. Two main approaches exist: Functional Correctness and Similarity Measurements.
+
+---
+
+### 4.1 Functional Correctness
+
+**Definition:** Evaluating whether the system actually performs its intended functionality. This is the gold standard — the ultimate measure of real-world performance.
+
+**Examples by task type:**
+
+| Task | How Functional Correctness Is Measured |
+|---|---|
+| Code generation | Does the code compile and produce correct outputs? Measured with unit tests |
+| Text-to-SQL generation | Does the generated SQL query return correct results when executed? |
+| Game-playing bots | Score achieved in the game (for example, Tetris score) |
+| Scheduling and optimisation agents | Measured by energy saved, cost reduced, and so on |
+
+**The pass@k metric for code generation:**
+- For each problem, generate `k` code samples
+- A problem is "solved" if any of the `k` samples pass all test cases
+- Final score = percentage of problems solved
+- Because more samples give more chances to solve a problem: `pass@1 < pass@3 < pass@10`
+
+**Key benchmarks using functional correctness:**
+- **HumanEval** (OpenAI) — code generation
+- **Mostly Basic Python Problems Dataset** (Google) — code generation
+- **Spider**, **BIRD-SQL**, **WikiSQL** — text-to-SQL generation
+
+---
+
+### 4.2 Similarity Measurements Against Reference Data
+
+When functional correctness cannot be automated, compare artificial intelligence outputs against human-curated reference responses.
+
+**The four similarity measurement methods:**
+
+| Method | How It Works | Best For | Key Limitation |
+|---|---|---|---|
+| Exact Match | Generated response must exactly match a reference response | Short factual answers, simple mathematics, trivia | Fails completely for open-ended or multi-answer tasks |
+| Lexical Similarity | Measures overlapping tokens or n-grams (BLEU, ROUGE, METEOR) | Translation, summarisation | Misses semantically correct paraphrases; high score ≠ correct answer |
+| Semantic Similarity | Cosine similarity of vector embeddings (BERTScore, MoverScore) | Complex language tasks | Quality depends entirely on the underlying embedding model |
+| Human or Artificial Intelligence Evaluator | Ask a person or artificial intelligence model to compare responses | Subjective quality judgements | Slow and expensive (human) or biased and inconsistent (artificial intelligence) |
+
+---
+
+### 4.3 Lexical Similarity — Key Metrics in Detail
+
+**How n-gram overlap works:**
+- A 1-gram (unigram) is a single token
+- A 2-gram (bigram) is a pair of consecutive tokens. For example, "my cats scare the mice" contains the bigrams: "my cats", "cats scare", "scare the", "the mice"
+- Lexical similarity measures what percentage of n-grams in the reference response also appear in the generated response
+
+**Common metrics:**
+
+| Metric | Focus | Common Use Case |
+|---|---|---|
+| BLEU (Bilingual Evaluation Understudy) | Precision — how much of the generated output appears in the reference | Machine translation |
+| ROUGE (Recall-Oriented Understudy for Gisting Evaluation) | Recall — how much of the reference appears in the generated output | Text summarisation |
+| METEOR++ | Adds stemming, synonym matching, paraphrasing awareness | Translation with linguistic flexibility |
+| Edit Distance / Fuzzy Matching | Counts insertions, deletions, and substitutions needed to convert one text to the other | Spell-checking, string matching |
+| CIDEr (Consensus-based Image Description Evaluation) | Image-captioning-specific n-gram metric | Image captioning |
+
+> **Critical finding from OpenAI (HumanEval benchmark):** BLEU scores for **correct** and **incorrect** code solutions were nearly identical. This proves that optimising for BLEU scores is not the same as optimising for functional correctness. Do not use lexical similarity to evaluate code generation tasks.
+
+---
+
+### 4.4 Semantic Similarity — How It Works
+
+Semantic similarity aims to measure whether two texts have the same **meaning**, not just the same words.
+
+**Step 1:** Convert text to an **embedding** — a numerical vector representation that captures meaning. Example: "the cat sits on a mat" → [0.11, 0.02, 0.54, ...]
+
+**Step 2:** Compute **cosine similarity** between two embedding vectors A and B:
+
+```
+cosine_similarity(A, B) = (A · B) / (||A|| × ||B||)
+```
+
+Where:
+- `A · B` = dot product of vectors A and B
+- `||A||` = Euclidean norm (also called L2 norm) of A
+- Range: -1 (completely opposite) to 1 (identical)
+
+**Common embedding models:**
+
+| Model | Embedding Size | Notes |
+|---|---|---|
+| Google BERT (base) | 768 dimensions | Open source, widely used |
+| Google BERT (large) | 1,024 dimensions | More powerful version |
+| OpenAI text-embedding-3-small | 1,536 dimensions | Strong general-purpose, API-based |
+| OpenAI text-embedding-3-large | 3,072 dimensions | Highest quality, more expensive |
+| Cohere Embed version 3 (English) | 1,024 dimensions | Strong multilingual alternative |
+
+**Metrics for semantic textual similarity:**
+- **BERTScore** — embeddings generated by BERT
+- **MoverScore** — embeddings generated by a mixture of algorithms
+
+**Limitation:** Semantic similarity can also be considered subjective because different embedding algorithms produce different embeddings. Two texts with identical meaning can still receive a low similarity score if the embedding model is poor quality.
+
+---
+
+### 4.5 Introduction to Embeddings
+
+An embedding is a **numerical vector representation** that aims to capture the meaning of the original data. Real embedding vectors typically have between 100 and 10,000 dimensions.
+
+**Joint embeddings (multimodal):** Models like CLIP (Contrastive Language-Image Pre-training) can map data of different modalities — text and images — into a shared embedding space. This enables text-based image search: find images whose embeddings are closest to the embedding of a text query.
+
+**Other joint embedding models:**
+- **ULIP** (Unified Language-Image-Points) — unifies text, images, and 3-dimensional point clouds
+- **ImageBind** — learns joint embeddings across six different modalities including text, images, and audio
+
+---
+
+## 5. Artificial Intelligence as a Judge
+
+**Definition:** Using an artificial intelligence model to evaluate other artificial intelligence model outputs. The approach is also called "large language model as a judge." An artificial intelligence model used to evaluate other artificial intelligence models is called an **artificial intelligence judge**.
+
+As of 2023 to 2024, this is the most common evaluation method in production — **58% of evaluations** on LangChain's platform used artificial intelligence judges.
+
+---
+
+### 5.1 Why Artificial Intelligence as a Judge?
+
+| Advantage | Detail |
+|---|---|
+| Fast and scalable | Evaluates thousands of responses without human bottleneck |
+| No reference data needed | Can be used in production where ground truth does not exist |
+| Flexible criteria | Can evaluate correctness, toxicity, faithfulness, hallucinations, tone — anything |
+| Explainable | Can explain its judgment, enabling evaluation auditing |
+| Reasonably aligned with human judgment | GPT-4 agreement with humans on MT-Bench: **85%** — higher than human-human agreement of **81%** |
+
+---
+
+### 5.2 Three Ways to Use Artificial Intelligence as a Judge
+
+**Approach 1 — Pointwise Scoring:** Evaluate a single response in isolation given the original question
+
+```
+"Given the following question and answer, evaluate how good the answer is
+for the question. Use the score from 1 to 5.
+- 1 means very bad.
+- 5 means very good.
+Question: [QUESTION]
+Answer: [ANSWER]
+Score:"
+```
+
+**Approach 2 — Reference Comparison:** Compare the generated answer against a reference answer
+
+```
+"Given the following question, reference answer, and generated answer,
+evaluate whether this generated answer is the same as the reference answer.
+Output True or False.
+Question: [QUESTION]
+Reference answer: [REFERENCE ANSWER]
+Generated answer: [GENERATED ANSWER]"
+```
+
+**Approach 3 — Pairwise Preference:** Compare two generated responses and pick the better one
+
+```
+"Given the following question and two answers, evaluate which answer is
+better. Output A or B.
+Question: [QUESTION]
+A: [FIRST ANSWER]
+B: [SECOND ANSWER]
+The better answer is:"
+```
+
+---
+
+### 5.3 How to Prompt an Artificial Intelligence Judge — Best Practices
+
+A good judge prompt must include all of the following elements:
+
+1. **Task description** — what the judge should evaluate (for example, relevance between answer and question)
+2. **Evaluation criteria** — detailed rubric explaining what to look for (the more detailed, the better)
+3. **Scoring system** — one of three types:
+   - Classification labels (for example, good / bad / neutral, or relevant / irrelevant)
+   - Discrete numerical values (for example, 1 to 5)
+   - Continuous numerical values (for example, 0 to 1 for degree of similarity)
+4. **Examples with scores and justification** — demonstrated to significantly improve consistency
+
+> **Scoring system guidance:**
+> - Artificial intelligence judges work better with **text labels** (good/bad/neutral) than with raw numbers
+> - **Discrete scores** (1 to 5) outperform continuous scores (0 to 1)
+> - Wider ranges produce worse model performance — stick to 1 to 5 at most
+> - Including scored examples in the prompt quadrupled GPT-4 API costs in one study — balance consistency against cost carefully
+
+---
+
+### 5.4 Limitations of Artificial Intelligence as a Judge
+
+| Limitation | Detail | Mitigation Strategy |
+|---|---|---|
+| **Inconsistency** | Same judge plus same prompt can produce different scores on different runs | Fix sampling temperature; add scored examples to the prompt |
+| **Criteria ambiguity** | MLflow, Ragas, and LlamaIndex all define "faithfulness" differently — scores are NOT comparable across tools | Always inspect both the model and the prompt used by any judge |
+| **Self-bias** | A model rates its own outputs approximately 10 to 25 percent higher than outputs from other models | Use a different model as the judge; cross-evaluate |
+| **First-position bias** | Artificial intelligence judges favour the FIRST response in pairwise comparisons (opposite of humans who favour the last) | Randomise presentation order; run each comparison twice |
+| **Verbosity bias** | Artificial intelligence judges prefer longer answers even when they contain factual errors over shorter correct answers | Normalise response length before judging |
+| **Cost and latency** | Three evaluation criteria using GPT-4 means four times as many application programming interface calls; adds latency to user-facing systems | Use weaker judge models; spot-check by evaluating only a random sample |
+
+**Criteria ambiguity in practice — "faithfulness" across three tools:**
+
+| Tool | Scoring System | Prompt Focus |
+|---|---|---|
+| MLflow | 1 to 5 | Assesses how much of the output is factually consistent with the provided context |
+| Ragas | 0 or 1 | Judges faithfulness of each statement independently — verified or not verified |
+| LlamaIndex | Yes or No | Asks whether any part of the context supports the information |
+
+These three tools produce completely incomparable scores for the same input.
+
+> **Rule:** Do not trust any artificial intelligence judge if you cannot see both the model AND the prompt being used.
+
+---
+
+### 5.5 Types of Specialised Artificial Intelligence Judges
+
+**Reward Model**
+- Takes a (prompt, response) pair and scores how good the response is given the prompt
+- Example: **Cappy** (Google, 2023) — 360 million parameters, outputs a score between 0 and 1 for correctness
+- Much smaller than general-purpose foundation models
+
+**Reference-Based Judge**
+- Evaluates the generated response against one or more reference responses
+- Example: **BLEURT** — takes (candidate response, reference response) and outputs a similarity score
+- Example: **Prometheus** — takes (prompt, generated response, reference response, scoring rubric) and outputs a quality score from 1 to 5
+
+**Preference Model**
+- Takes (prompt, response 1, response 2) and outputs which response users would prefer
+- Directly predicts human preference rather than relying on human votes
+- Examples: **PandaLM**, **JudgeLM**
+- PandaLM not only picks the better response but also explains its reasoning
+
+**Self-Evaluation (Self-Critique)**
+- A model evaluates its own outputs
+- Useful for sanity checks — if a model thinks its own response is wrong, it is probably unreliable
+- Can nudge a model to revise and improve its response
+- Risk: strong self-bias undermines accuracy
+
+---
+
+## 6. Ranking Models with Comparative Evaluation
+
+Instead of scoring models in isolation (pointwise), **pit them against each other** and infer rankings from win/loss records — similar to the Elo rating system in chess.
+
+---
+
+### 6.1 Pointwise versus Comparative Evaluation
+
+| Aspect | Pointwise Evaluation | Comparative Evaluation |
+|---|---|---|
+| Method | Score each model independently | Compare models head-to-head in matches |
+| Analogy | Gymnastics: judge gives each routine a numerical score | Dance contest: judges pick the better dancer side-by-side |
+| Strength | Gives absolute scores — answers "is this model good enough?" | Easier for subjective quality; harder to cheat |
+| Weakness | Difficult to give absolute scores for open-ended outputs | Does not tell you if any model is actually good enough |
+| Requires | Well-designed benchmarks and scoring rubrics | Rating algorithm (Elo, Bradley-Terry, TrueSkill) |
+
+---
+
+### 6.2 How Comparative Evaluation Works
+
+1. Two models are selected per match and generate responses to the same prompt
+2. An evaluator — human or artificial intelligence — picks the winner or declares a tie
+3. Win rates are computed per model pair across many matches
+4. A rating algorithm converts win rates into a ranking
+
+**Important history:**
+- Comparative evaluation was first used in artificial intelligence in **2021 by Anthropic** to rank different models
+- **LMSYS Chatbot Arena** is the most prominent example — originally used Elo rating, later switched to **Bradley-Terry** algorithm because Elo proved too sensitive to the order of matches and prompts
+- January 2024: 57 models evaluated across 244,000 comparisons (approximately 153 comparisons per model pair)
+
+---
+
+### 6.3 Challenges of Comparative Evaluation
+
+**Scalability bottlenecks**
+- The number of model pairs grows quadratically with the number of models
+- 57 models = 1,596 unique model pairs
+- Rating algorithms assume **transitivity** (if A beats B and B beats C, then A should beat C), but human preference is not necessarily transitive
+
+**Lack of standardisation and quality control**
+- Crowdsourced comparisons (like LMSYS Chatbot Arena) allow anyone to vote — evaluators may not fact-check responses
+- Simple prompts dominate: among 33,000 LMSYS Arena prompts in 2023, 180 were just "hello" or "hi"
+- Simple prompts cannot differentiate strong models from weak ones
+
+**From comparative to absolute performance**
+- Comparative evaluation tells you A is better than B — it does not tell you whether A is actually good enough for your use case
+- A 51 percent win rate of model B over model A does not tell you how much real-world performance will improve
+
+---
+
+### 6.4 Why Comparative Evaluation Still Has a Future
+
+Despite its limitations, comparative evaluation has several irreplaceable advantages:
+
+- It is **easier for evaluators** than giving absolute scores — even when models produce outputs beyond human ability, evaluators can still detect which is better
+- It **never saturates** — unlike benchmarks that become useless at perfect scores, comparative evaluation remains meaningful as long as new models exist
+- It **captures human preference directly** — the quality metric that ultimately matters for user-facing applications
+- It is **hard to cheat** — no fixed reference data exists to train on
+
+> **Important distinction:** Comparative evaluation is NOT the same as A/B testing. In A/B testing, each user sees the output from ONE model at a time. In comparative evaluation, the user sees outputs from MULTIPLE models simultaneously.
+
+---
+
+## 7. Quick-Reference Cheat Sheet
+
+### Metric Hierarchy
+
+| Metric | Type | What It Measures | Key Weakness |
+|---|---|---|---|
+| Cross Entropy | Language model | Difficulty of predicting training data tokens | Does not directly measure downstream task performance |
+| Perplexity | Language model | Uncertainty in predicting the next token | Unreliable after Supervised Fine-Tuning or Reinforcement Learning from Human Feedback post-training |
+| Bits-per-Character / Bits-per-Byte | Language model | Compression efficiency (normalised across tokenisers) | Cross-model comparison still requires same tokenisation approach |
+| Exact Match | Exact | Binary match to a reference response | Fails for any paraphrasing or multi-answer tasks |
+| BLEU / ROUGE | Lexical | n-gram overlap with a reference response | High score does not equal correct code or genuinely good quality |
+| BERTScore | Semantic | Cosine similarity of BERT embeddings | Quality entirely depends on the underlying embedding model |
+| Artificial Intelligence Judge Score | Subjective | Holistic quality per the judge's criteria | Biased, inconsistent, not standardised across tools |
+| Elo / Bradley-Terry | Comparative | Relative model ranking from match wins | Does not indicate whether any model meets an absolute quality bar |
+
+---
+
+### Artificial Intelligence Judge Biases
+
+| Bias | Description | Who Exhibits It |
+|---|---|---|
+| Self-bias | Prefers its own outputs — GPT-4 at +10 percent win rate, Claude version 1 at +25 percent win rate for own responses | All models tested |
+| First-position bias | Prefers the FIRST response in pairwise comparisons | Artificial intelligence models generally |
+| Verbosity bias | Prefers longer answers even if factually wrong compared to shorter correct answers | GPT-3.5 strongly; GPT-4 to a lesser extent |
+| Recency bias | Prefers the LAST response seen — the opposite of artificial intelligence position bias | Humans (not artificial intelligence) |
+
+---
+
+### Key Numbers to Memorise
+
+| Fact | Number or Detail |
+|---|---|
+| GPT-4 agreement with humans on MT-Bench | 85 percent — higher than human-human agreement of 81 percent |
+| Artificial intelligence judges on LangChain platform (2023) | 58 percent of all evaluations used artificial intelligence judges |
+| Claude version 1 self-bias | +25 percent higher win rate for own responses (GPT-4: +10 percent) |
+| LMSYS Arena — January 2024 | 57 models, 244,000 comparisons, approximately 153 per model pair |
+| Large language model evaluation papers growth in first half of 2023 | From 2 papers per month to approximately 35 papers per month |
+| Evaluation repositories in top 1,000 artificial intelligence GitHub repositories | Over 50 dedicated to evaluation (as of May 2024) |
+| GLUE benchmark lifespan | 2018 → saturated in 1 year → SuperGLUE in 2019 |
+| GPT-2 (117 million parameters) perplexity on WikiText-2 | 29.41 |
+| GPT-2 (1,542 million parameters) perplexity on WikiText-2 | 18.34 — bigger model, lower perplexity |
+
+---
+
+### The Evaluation Decision Tree
+
+When building an evaluation pipeline, follow this mental framework:
+
+```
+Can you measure functional correctness automatically?
+├── YES → Use it (code unit tests, SQL execution, game scores)
+└── NO → Do you have reference data?
+         ├── YES → Lexical similarity (BLEU/ROUGE) or Semantic similarity (BERTScore)
+         └── NO → Artificial intelligence as a judge (pointwise or pairwise)
+
+Do you need to RANK models rather than score them?
+└── YES → Comparative evaluation (Elo or Bradley-Terry rating system)
+
+Always supplement artificial intelligence judges with:
+├── Exact evaluation methods where possible
+└── Human spot-checks on a random sample
+```
+
+---
+
+## 8. Common Exam Traps and Things to Remember
+
+### Trap 1 — Perplexity Does Not Mean Better Task Performance After Post-Training
+
+After Supervised Fine-Tuning or Reinforcement Learning from Human Feedback, a model can get **worse** at predicting next tokens (higher perplexity) but **better** at answering questions. Post-training "collapses entropy." Never use perplexity to evaluate instruction-tuned or chat models.
+
+---
+
+### Trap 2 — High BLEU Score Does Not Mean Correct Code
+
+OpenAI showed on HumanEval that BLEU scores for **correct** and **incorrect** code solutions were nearly identical. Optimising for BLEU is not the same as optimising for actually solving problems correctly. Lexical similarity is a weak proxy for functional correctness.
+
+---
+
+### Trap 3 — Scores from Different Artificial Intelligence Judges Are Not Comparable
+
+MLflow "faithfulness" (1 to 5), Ragas "faithfulness" (0 or 1), and LlamaIndex "faithfulness" (Yes or No) all measure different things using different prompts and different criteria. Never compare raw scores across tools without inspecting the underlying judge configuration.
+
+---
+
+### Trap 4 — Comparative Evaluation Is Not the Same as A/B Testing
+
+In A/B testing: each user sees ONE model's output at a time. In comparative evaluation: the evaluator sees outputs from BOTH models simultaneously and picks the better one. These methodologies answer fundamentally different questions.
+
+---
+
+### Trap 5 — Artificial Intelligence Position Bias Is the Opposite of Human Bias
+
+Humans have **recency bias** — they tend to prefer the answer they see **last**. Artificial intelligence models have **first-position bias** — they tend to prefer the answer that appears **first**. In pairwise evaluations, always randomise the order of responses and run each comparison twice to control for this bias.
+
+---
+
+### Trap 6 — Stronger Models Are Not Always the Best Judges
+
+Using a stronger model as a judge is expensive and introduces self-bias at the top of the hierarchy (the strongest model has no eligible judge above it). Small, specialised judges — trained to make specific judgements using specific criteria — can be more reliable than large general-purpose judges for specific tasks.
+
+---
+
+### Trap 7 — Reference Data Quality Matters as Much as the Metric
+
+The WMT 2023 Metrics shared task organisers found **many bad reference translations** in their evaluation data. Low-quality reference data makes reference-based metrics unreliable. This is one reason reference-free metrics (like artificial intelligence judges) have gained popularity — they do not depend on the quality of curated reference data.
+
+---
+
+*End of Chapter 3 Study Notes*
+
+---
+
+> **Recommended next step:** Chapter 4 covers how to use these evaluation methods together to select models for your specific application and build a complete evaluation pipeline.
